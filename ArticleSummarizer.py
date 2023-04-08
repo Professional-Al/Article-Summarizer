@@ -21,13 +21,35 @@ def get_driver(browser_name):
         raise ValueError(f"Unsupported browser: {browser_name}")
 
 
-# Function to scrape the title of a Wikipedia article
-def scrape_wikipedia_article(url, browser_name="chrome"):
+def search_wikipedia(driver, article_name):
+    search_url = "https://en.wikipedia.org/wiki/Special:Search"
+    driver.get(search_url)
+    search_box = driver.find_element(By.ID, "searchInput")
+    search_box.send_keys(article_name)
+    search_box.send_keys(Keys.RETURN)
+    time.sleep(2)  # Wait for search results to load
+    first_result = driver.find_element(By.CSS_SELECTOR, ".mw-search-result-heading a")
+    first_result.click()
+    time.sleep(2)  # Wait for the article to load
+
+
+def scrape_wikipedia_article(article_name, browser_name="firefox"):
     # Set up the web driver for the specified browser
     driver = get_driver(browser_name)
 
-    # Navigate to the specified URL
-    driver.get(url)
+    # Try to navigate directly to the specified article
+    article_url = f"https://en.wikipedia.org/wiki/{article_name.replace(' ', '_')}"
+    driver.get(article_url)
+
+    # Check if the "no article" message is displayed
+    no_article_msg = "Wikipedia does not have an article with this exact name."
+    try:
+        error_message_element = driver.find_element(By.ID, "mw-content-text")
+        if no_article_msg in error_message_element.text:
+            search_wikipedia(driver, article_name)
+            print("Direct match not found. Using top search result instead.")
+    except Exception:
+        pass
 
     # Find the title element
     title_element = driver.find_element(By.ID, "firstHeading")
@@ -41,12 +63,11 @@ def scrape_wikipedia_article(url, browser_name="chrome"):
     return title
 
 
-# Example usage
 if __name__ == "__main__":
-    wiki_url = "https://en.wikipedia.org/wiki/Web_scraping"
+    article_name = input("Enter the name of the Wikipedia article: ")
 
     # Choose your desired browser: "chrome", "firefox", or "edge"
     browser = "chrome"
 
-    title = scrape_wikipedia_article(wiki_url, browser_name=browser)
+    title = scrape_wikipedia_article(article_name, browser_name=browser)
     print(f"Title of the Wikipedia article: {title}")
